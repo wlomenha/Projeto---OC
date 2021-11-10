@@ -31,7 +31,6 @@ function subproblema(c, u, f, K, num_fac, num_cli)
         for j in 1:num_cli
             v[i] = v[i] + min(0, c[i,j] - u[j])
         end 
-        f[i] = v[i]
     end
 
     idx = sortperm(v) #lista dos índices
@@ -48,20 +47,14 @@ function subproblema(c, u, f, K, num_fac, num_cli)
     end
 
     lb = 0.0 #lower bound
-    # for j in 1:num_cli
-    #     lb = lb + u[j]
-    #     for i in 1:num_fac
-    #         if x[i,j] == 1
-    #             lb = lb + c[i,j] - u[j]
-    #         end 
-    #     end
-    # end
-    
-    for i in 1:num_fac
-        if y[i] == 1 
-            lb = lb + v[i]
-        end 
-    end 
+    for j in 1:num_cli
+        lb = lb + u[j]
+         for i in 1:num_fac
+             if x[i,j] == 1
+                 lb = lb + c[i,j] - u[j]
+             end 
+         end
+    end
 
     return x, y, lb
 end
