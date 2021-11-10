@@ -54,7 +54,7 @@ function subproblema(c, u, f, K, num_fac, num_cli)
                  lb = lb + c[i,j] - u[j]
              end 
          end
-    end
+end
 
     return x, y, lb
 end
@@ -64,33 +64,16 @@ function upper_bound(y, num_fac, num_cli, c, f)
     x = zeros(num_fac, num_cli)
     
     # Se a facilidade abriu, atribuir clientes mais próximos a ele (de menor custo)
-    # for j in 1:num_cli
-    #     idx = argmin(c[:,j] + (1 .- y) .* maximum(c))
-    #     x[idx, j] = 1
-    # end
-    idx = 0
-    for i in 1:num_cli
-        min_cost = Inf
-        if y[i] == 1
-            for j in 1:num_cli
-                if c[i,j] < min_cost && c[i,j] != 0   
-                    min_cost = c[i,j]
-                    idx = j
-                    #println("i ",i, " j ", j, " cost ", c[i,j])
-                end
-            end
-            x[i,idx] = 1
-            #println("variavel x[i,j]", " i ", i , " j ", idx)
-            #println("i ",i, " j ", j, " cost ", c[i,j])
-        end
+    for j in 1:num_cli
+        idx = argmin(c[:,j] + (1 .- y) .* maximum(c))
+        x[idx, j] = 1
     end
-
 
     ub = 0.0
     for i in 1:num_fac
         for j in 1:num_cli
             if x[i,j] == 1
-                ub = ub + c[i,j]
+                ub = ub + c[i,j]*x[i,j]
             end 
         end
     end
@@ -231,7 +214,7 @@ for k in 1:maxIter
     mi = p_i*((ub-z)/(norm)^2)
 
     for j in 1:num_cli
-        u[j] = u[j] + mi*s[j]
+        u[j] = max(0, u[j] + mi*s[j])
     end 
 
     if mi < pi_min
