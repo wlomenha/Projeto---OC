@@ -3,27 +3,11 @@ using DelimitedFiles
 
 #path = "D:\\GitHub - Projects\\Projeto - OC\\toy.txt"
 
-path = "D:\\GitHub - Projects\\Projeto - OC\\pmed20.txt"
-
-function leitura_arquivo(path)
-    num_fac = readdlm(path)[1,1]
-    num_cli = readdlm(path)[1,2]
-
-    c = zeros(num_fac, num_cli)
-    f = readdlm(path)[2,:]
-
-    for j in 1:num_cli
-        for i in 1:num_fac
-            c[i,j] = readdlm(path)[i+2, j]
-        end
-    end
-
-    return num_cli, num_fac, c, f
-end
+path = "D:\\GitHub - Projects\\Projeto - OC\\pmed5.txt"
 
 function leitura_arquivo2(path)
     num_fac = readdlm(path)[1,1]
-    num_cli = readdlm(path)[1,2]
+    num_cli = readdlm(path)[1,1]
     K = readdlm(path)[1,3]
     c = zeros(num_fac, num_cli)
     f = zeros(num_fac)
@@ -32,17 +16,9 @@ function leitura_arquivo2(path)
         j = readdlm(path)[k+1,2]
         c[i,j] = readdlm(path)[k+1,3]
     end
-    f[1:num_fac] .= floor(maximum(c)/2)
+    f[1:num_fac] .= 0
     return num_cli, num_fac, c, f, K
 end
-
-
-
-
-
-
-
-
 
 
 function subproblema(c, u, f, K, num_fac, num_cli)
@@ -51,10 +27,11 @@ function subproblema(c, u, f, K, num_fac, num_cli)
     v = zeros(num_fac) #custo lagrangiano (ajuda no subproblema)
 
     for i in 1:num_fac
-        v[i] = f[i]
+        v[i] = 0
         for j in 1:num_cli
             v[i] = v[i] + min(0, c[i,j] - u[j])
         end 
+        f[i] = v[i]
     end
 
     idx = sortperm(v) #lista dos índices
@@ -71,47 +48,59 @@ function subproblema(c, u, f, K, num_fac, num_cli)
     end
 
     lb = 0.0 #lower bound
-    for j in 1:num_cli
-        lb = lb + u[j]
-        for i in 1:num_fac
-            if x[i,j] == 1
-                lb = lb + c[i,j] - u[j]
-            end 
-        end
-    end
+    # for j in 1:num_cli
+    #     lb = lb + u[j]
+    #     for i in 1:num_fac
+    #         if x[i,j] == 1
+    #             lb = lb + c[i,j] - u[j]
+    #         end 
+    #     end
+    # end
     
     for i in 1:num_fac
         if y[i] == 1 
-            lb = lb + f[i]
+            lb = lb + v[i]
         end 
     end 
 
     return x, y, lb
 end
 
+
 function upper_bound(y, num_fac, num_cli, c, f)
     x = zeros(num_fac, num_cli)
     
     # Se a facilidade abriu, atribuir clientes mais próximos a ele (de menor custo)
-    for j in 1:num_cli
-        idx = argmin(c[:,j] + (1 .- y) .* maximum(c))
-        x[idx, j] = 1
+    # for j in 1:num_cli
+    #     idx = argmin(c[:,j] + (1 .- y) .* maximum(c))
+    #     x[idx, j] = 1
+    # end
+    idx = 0
+    for i in 1:num_cli
+        min_cost = Inf
+        if y[i] == 1
+            for j in 1:num_cli
+                if c[i,j] < min_cost && c[i,j] != 0   
+                    min_cost = c[i,j]
+                    idx = j
+                    #println("i ",i, " j ", j, " cost ", c[i,j])
+                end
+            end
+            x[i,idx] = 1
+            #println("variavel x[i,j]", " i ", i , " j ", idx)
+            #println("i ",i, " j ", j, " cost ", c[i,j])
+        end
     end
+
 
     ub = 0.0
     for i in 1:num_fac
         for j in 1:num_cli
             if x[i,j] == 1
-                ub = ub + c[i,j]*x[i,j]
+                ub = ub + c[i,j]
             end 
         end
     end
-
-    for i in 1:num_fac
-        if y[i] == 1 
-            ub = ub + f[i]
-        end 
-    end 
 
     return ub, x
 end
@@ -137,6 +126,7 @@ function subgradiente(maxIter, p_i, pi_min)
 
     for k in 1:maxIter    
         x_sub, y_sub, z = subproblema(c, u, f, K, num_fac, num_cli)
+        println("o valor de z é: ", z)
 
         if z > best_lim_inf
             best_lim_inf = z
@@ -153,7 +143,7 @@ function subgradiente(maxIter, p_i, pi_min)
             y_best = y_sub
         end 
 
-        if best_lim_sup - best_lim_inf < 1
+        if best_lim_sup - best_lim_inf < 1 && k != 1
             println("Parando por otimalidade (z_up == z_low) - iteração ", k)
             break
         end
@@ -203,6 +193,7 @@ improve = 0
 
 for k in 1:maxIter    
     x_sub, y_sub, z = subproblema(c, u, f, K, num_fac, num_cli)
+    println("o valor de z é: ", z)
 
     if z > best_lim_inf
         best_lim_inf = z
@@ -217,9 +208,10 @@ for k in 1:maxIter
         best_lim_sup = ub 
         x_best = x_up
         y_best = y_sub
+        println(ub)
     end 
 
-    if best_lim_sup - best_lim_inf < 1
+    if best_lim_sup - best_lim_inf < 1 && k != 1
         println("Parando por otimalidade (z_up == z_low) - iteração ", k)
         break
     end
